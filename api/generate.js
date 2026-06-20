@@ -10,7 +10,11 @@ module.exports = async function handler(req, res) {
     const { system, messages, max_tokens } = req.body;
     const userText = (messages && messages[0]) ? messages[0].content : '';
 
-    const response = await fetch(
+    if (!userText) {
+      return res.status(400).json({ error: 'No content provided.' });
+    }
+
+    const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: 'POST',
@@ -23,16 +27,31 @@ module.exports = async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
-    const text = (data.candidates && data.candidates[0])
-      ? data.candidates[0].content.parts[0].text
-      : '';
+    const data = await geminiRes.json();
 
-    // reshaped so the existing frontend code doesn't need to change
-    res.status(response.status).json({ content: [{ type: 'text', text }] });
+    // Gemini returned an HTTP error (bad key, rate limit, quota, etc.)
+    if (!geminiRes.ok) {
+      console.error('Gemini API error:', geminiRes.status, JSON.stringify(data));
+      const reason = data?.error?.message || 'Unknown Gemini error';
+      return res.status(geminiRes.status).json({ error: 'Gemini error: ' + reason });
+    }
+
+    const candidate = data.candidates && data.candidates[0];
+
+    // Request succeeded but content was blocked or empty
+    if (!candidate || !candidate.content) {
+      console.error('Gemini returned no usable candidate:', JSON.stringify(data));
+      const blockReason = data?.promptFeedback?.blockReason || candidate?.finishReason || 'empty response';
+      return res.status(200).json({
+        content: [{ type: 'text', text: `(Couldn't generate this — reason: ${blockReason}. Try shorter or different content.)` }]
+      });
+    }
+
+    const text = candidate.content.parts.map(p => p.text || '').join('');
+    res.status(200).json({ content: [{ type: 'text', text }] });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Something went wrong generating a response.' });
+    console.error('Server error:', err.message);
+    res.status(500).json({ error: 'Server error: ' + err.message });
   }
 };
