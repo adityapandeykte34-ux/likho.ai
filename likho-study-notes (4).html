@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Likho — Study Notes Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap');
+
+:root{
+  --ink-navy:#161B33;
+  --ink-navy-2:#1F2547;
+  --ink-navy-3:#2A3163;
+  --accent-amber:#E8A33D;
+  --accent-amber-dim:#C98A2E;
+  --paper-bg:#FBF8F1;
+  --rule-blue:#B9CFE4;
+  --margin-red:#D8746B;
+  --text-light:#EDEFF7;
+  --text-dim:#9AA3C9;
+  --pen-ink:#2C4870;
+  --danger:#E27D6B;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Space Grotesk',sans-serif;
+  background:var(--ink-navy);
+  color:var(--text-light);
+  min-height:100vh;
+}
+
+button, input, textarea{font-family:inherit;}
+button:focus-visible, input:focus-visible, textarea:focus-visible, label:focus-within{
+  outline:2px solid var(--accent-amber); outline-offset:2px;
+}
+
+.app{display:grid;grid-template-columns:380px 1fr;min-height:100vh;}
+@media (max-width:860px){.app{grid-template-columns:1fr;}}
+
+/* ---------- LEFT PANEL ---------- */
+.panel{
+  padding:32px 28px 40px;
+  background:linear-gradient(180deg,var(--ink-navy-2),var(--ink-navy));
+  border-right:1px solid rgba(255,255,255,.07);
+}
+.eyebrow{
+  font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent-amber); font-weight:600; margin-bottom:6px;
+}
+.brand{
+  font-size:30px; font-weight:700; margin:0 0 4px; letter-spacing:-.01em;
+}
+.tagline{
+  font-size:13px; color:var(--text-dim); margin:0 0 28px; line-height:1.5;
+}
+
+.field-label{
+  font-size:12px; font-weight:600; color:var(--text-dim);
+  text-transform:uppercase; letter-spacing:.08em; margin:0 0 8px;
+}
+
+.topic-input{
+  width:100%; padding:11px 13px; margin-bottom:20px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; color:var(--text-light); font-size:14px;
+}
+.topic-input::placeholder{color:var(--text-dim);}
+
+.tabs{display:flex; gap:6px; margin-bottom:14px; background:rgba(0,0,0,.2); padding:4px; border-radius:10px;}
+.tab{
+  flex:1; padding:8px 6px; border:none; background:transparent; color:var(--text-dim);
+  font-size:12.5px; font-weight:600; border-radius:7px; cursor:pointer; transition:.15s;
+}
+.tab.active{background:var(--ink-navy-3); color:var(--text-light);}
+
+.input-mode{margin-bottom:20px;}
+textarea.content-area{
+  width:100%; min-height:150px; resize:vertical; padding:12px 13px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; color:var(--text-light); font-size:13.5px; line-height:1.5;
+}
+textarea.content-area::placeholder{color:var(--text-dim);}
+
+.upload-zone{
+  border:1.5px dashed rgba(255,255,255,.22); border-radius:10px;
+  padding:24px 16px; text-align:center; cursor:pointer; transition:.15s;
+}
+.upload-zone:hover{border-color:var(--accent-amber); background:rgba(232,163,61,.04);}
+.upload-zone svg{margin-bottom:8px; opacity:.7;}
+.upload-zone .u-main{font-size:13px; font-weight:600;}
+.upload-zone .u-sub{font-size:11.5px; color:var(--text-dim); margin-top:3px;}
+.file-chip{
+  display:flex; align-items:center; justify-content:space-between;
+  background:rgba(232,163,61,.1); border:1px solid rgba(232,163,61,.3);
+  padding:9px 12px; border-radius:8px; font-size:12.5px;
+}
+.file-chip button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;}
+.hidden{display:none;}
+
+.length-pills{display:flex; gap:6px; margin-bottom:24px;}
+.pill{
+  flex:1; padding:9px 4px; text-align:center; border-radius:8px; cursor:pointer;
+  border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03);
+  font-size:11.5px; font-weight:600; color:var(--text-dim); transition:.15s;
+}
+.pill.active{background:var(--accent-amber); border-color:var(--accent-amber); color:var(--ink-navy);}
+
+.generate-btn{
+  width:100%; padding:14px; border:none; border-radius:10px;
+  background:var(--accent-amber); color:var(--ink-navy); font-size:14.5px; font-weight:700;
+  cursor:pointer; transition:.15s; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.generate-btn:hover:not(:disabled){background:var(--accent-amber-dim);}
+.generate-btn:disabled{opacity:.6; cursor:not-allowed;}
+
+.spinner{
+  width:15px; height:15px; border:2px solid rgba(22,27,51,.3); border-top-color:var(--ink-navy);
+  border-radius:50%; animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.error-box{
+  margin-top:14px; padding:10px 12px; background:rgba(226,125,107,.12);
+  border:1px solid rgba(226,125,107,.35); border-radius:8px; font-size:12.5px; color:#F3B3A6;
+}
+
+/* ---------- RIGHT: PAPER ---------- */
+.right{padding:40px 28px; display:flex; flex-direction:column; align-items:center;}
+.topbar{
+  width:100%; max-width:680px; display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:16px;
+}
+.topbar h2{font-size:15px; font-weight:600; margin:0; color:var(--text-light);}
+.print-btn{
+  display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.04);
+  color:var(--text-light); font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.print-btn:hover{border-color:var(--accent-amber);}
+.print-btn:disabled{opacity:.3; cursor:not-allowed;}
+.simplify-btn{
+  display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px;
+  border:1px solid rgba(232,163,61,.4); background:rgba(232,163,61,.1);
+  color:var(--accent-amber); font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.simplify-btn:hover:not(:disabled){background:rgba(232,163,61,.18);}
+.simplify-btn:disabled{opacity:.3; cursor:not-allowed;}
+.topbar-actions{display:flex; gap:8px;}
+
+.study-tabs{
+  display:flex; gap:6px; width:100%; max-width:680px; margin-bottom:14px;
+}
+.study-tabs.hidden{display:none;}
+.study-tab{
+  flex:1; padding:9px 4px; text-align:center; border-radius:8px; cursor:pointer;
+  border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);
+  font-size:12.5px; font-weight:600; color:var(--text-dim); transition:.15s;
+}
+.study-tab.active{background:var(--ink-navy-3); color:var(--text-light); border-color:rgba(232,163,61,.5);}
+.study-tab:disabled{opacity:.3; cursor:not-allowed;}
+
+.loading-paper{
+  font-family:'Caveat',cursive; font-size:24px; color:#9098a8; line-height:36px; padding-top:6px;
+}
+
+.flash-wrap{display:flex; flex-direction:column; align-items:center; gap:16px; padding-top:12px;}
+.flashcard{width:100%; max-width:480px; height:250px; perspective:1200px; cursor:pointer;}
+.flashcard-inner{position:relative; width:100%; height:100%; transition:transform .5s; transform-style:preserve-3d;}
+.flashcard.flipped .flashcard-inner{transform:rotateY(180deg);}
+.flashcard-face{
+  position:absolute; inset:0; backface-visibility:hidden; display:flex; align-items:center;
+  justify-content:center; text-align:center; padding:28px; border-radius:8px;
+  background:rgba(255,255,255,.55); border:1px solid rgba(44,72,112,.15);
+  font-family:'Caveat',cursive; font-size:27px; color:var(--pen-ink); line-height:1.3;
+}
+.flashcard-face.back{transform:rotateY(180deg); background:rgba(232,163,61,.2);}
+.flash-hint{font-size:11.5px; color:#8a93ac; font-family:'Space Grotesk',sans-serif;}
+.flash-nav{display:flex; align-items:center; gap:16px;}
+.flash-nav button{
+  padding:8px 14px; border-radius:8px; border:1px solid rgba(44,72,112,.25);
+  background:rgba(255,255,255,.5); color:var(--pen-ink); font-weight:600; cursor:pointer;
+  font-family:'Space Grotesk',sans-serif; font-size:12.5px;
+}
+.flash-nav button:disabled{opacity:.3; cursor:not-allowed;}
+.flash-counter{font-family:'Space Grotesk',sans-serif; font-size:12.5px; color:#5c6a86;}
+
+.practice-item{margin-bottom:20px;}
+.practice-q{font-family:'Caveat',cursive; font-size:26px; color:var(--pen-ink); line-height:34px;}
+.practice-toggle{
+  display:inline-block; margin-top:2px; font-family:'Space Grotesk',sans-serif; font-size:11.5px;
+  font-weight:600; color:var(--accent-amber-dim); cursor:pointer; background:none; border:none; padding:0;
+}
+.practice-a{
+  font-family:'Caveat',cursive; font-size:24px; color:#6a7d9e; line-height:32px; margin-top:4px;
+  display:none; border-left:2px solid var(--accent-amber); padding-left:10px;
+}
+.practice-a.show{display:block;}
+
+.paper{
+  width:100%; max-width:680px; min-height:780px;
+  background-color:var(--paper-bg);
+  background-image:repeating-linear-gradient(to bottom, transparent, transparent 35px, var(--rule-blue) 36px);
+  position:relative; border-radius:3px; box-shadow:0 24px 60px rgba(8,11,24,.4);
+  padding:46px 36px 46px 72px;
+}
+.paper::before{
+  content:''; position:absolute; left:50px; top:0; bottom:0; width:2px;
+  background:var(--margin-red); opacity:.5;
+}
+
+.empty-state{
+  font-family:'Caveat',cursive; font-size:24px; color:#9098a8; line-height:36px;
+  padding-top:6px;
+}
+
+.note-heading{
+  font-family:'Caveat',cursive; font-weight:700; font-size:32px; color:var(--pen-ink);
+  margin:18px 0 6px; line-height:36px; border-bottom:2px dashed var(--accent-amber-dim);
+  display:inline-block; padding-bottom:2px; opacity:0; transform:translateY(8px) rotate(-.4deg);
+  animation:writeIn .4s ease forwards;
+}
+.note-heading:first-child{margin-top:0;}
+.note-bullet{
+  font-family:'Caveat',cursive; font-size:25px; color:var(--pen-ink); line-height:36px;
+  margin:0 0 0 4px; opacity:0; transform:translateY(8px) rotate(.3deg); animation:writeIn .4s ease forwards;
+}
+.note-bullet::before{content:'— '; }
+.note-text{
+  font-family:'Caveat',cursive; font-size:25px; color:var(--pen-ink); line-height:36px;
+  margin:0; opacity:0; transform:translateY(8px) rotate(-.2deg); animation:writeIn .4s ease forwards;
+}
+@keyframes writeIn{to{opacity:1; transform:translateY(0) rotate(0);}}
+@media (prefers-reduced-motion:reduce){
+  .note-heading,.note-bullet,.note-text{animation:none !important; opacity:1 !important; transform:none !important;}
+}
+
+@media print{
+  body *{visibility:hidden;}
+  .paper, .paper *{visibility:visible;}
+  .paper{position:absolute; left:0; top:0; box-shadow:none; max-width:100%; width:100%;}
+}
+
+@media (max-width:860px){
+  .right{padding:28px 16px 60px;}
+  .paper{padding:36px 24px 36px 56px;}
+  .paper::before{left:36px;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="panel">
+    <div class="eyebrow">Digital Notebook</div>
+    <h1 class="brand">Likho</h1>
+    <p class="tagline">Paste a topic or upload a chapter. Get it back as neat, structured notes you can actually revise from.</p>
+
+    <div class="field-label">Topic / subject (optional)</div>
+    <input class="topic-input" id="topicInput" placeholder="e.g. Organic Chemistry — Ch. 4, Aldehydes">
+
+    <div class="tabs">
+      <button class="tab active" id="tabPaste">Paste text</button>
+      <button class="tab" id="tabPdf">Upload PDF</button>
+    </div>
+
+    <div class="input-mode" id="pasteMode">
+      <textarea class="content-area" id="contentArea" placeholder="Paste your chapter, lecture notes, or topic content here..."></textarea>
+    </div>
+
+    <div class="input-mode hidden" id="pdfMode">
+      <div class="upload-zone" id="uploadZone">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9AA3C9" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <div class="u-main">Click to upload a PDF</div>
+        <div class="u-sub">Text-based PDFs work best</div>
+      </div>
+      <div class="file-chip hidden" id="fileChip">
+        <span id="fileName"></span>
+        <button id="removeFile">Remove</button>
+      </div>
+      <input type="file" id="fileInput" accept="application/pdf" class="hidden">
+    </div>
+
+    <div class="field-label">Length</div>
+    <div class="length-pills">
+      <div class="pill active" data-len="brief">Brief</div>
+      <div class="pill" data-len="standard">Standard</div>
+      <div class="pill" data-len="detailed">Detailed</div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn">Generate notes</button>
+    <div class="error-box hidden" id="errorBox"></div>
+  </div>
+
+  <div class="right">
+    <div class="topbar">
+      <h2 id="paperTitle">Your notes</h2>
+      <div class="topbar-actions">
+        <button class="simplify-btn" id="simplifyBtn" disabled>Simplify further</button>
+        <button class="print-btn" id="printBtn" disabled>Download / Print</button>
+      </div>
+    </div>
+    <div class="study-tabs hidden" id="studyTabs">
+      <button class="study-tab active" id="tabNotes" data-tab="notes">Notes</button>
+      <button class="study-tab" id="tabFlash" data-tab="flashcards">Flashcards</button>
+      <button class="study-tab" id="tabPractice" data-tab="practice">Practice Qs</button>
+    </div>
+    <div class="paper" id="paper">
+      <div class="empty-state" id="emptyState">Your handwritten notes will show up here once you hit "Generate notes" on the left.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let mode = 'paste';
+let uploadedFile = null;
+let selectedLength = 'brief';
+
+const LENGTH_CONFIG = {
+  brief:    { words: 180 },
+  standard: { words: 380 },
+  detailed: { words: 650 }
+};
+
+const tabPaste = document.getElementById('tabPaste');
+const tabPdf = document.getElementById('tabPdf');
+const pasteMode = document.getElementById('pasteMode');
+const pdfMode = document.getElementById('pdfMode');
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const fileChip = document.getElementById('fileChip');
+const fileName = document.getElementById('fileName');
+const removeFile = document.getElementById('removeFile');
+const generateBtn = document.getElementById('generateBtn');
+const errorBox = document.getElementById('errorBox');
+const paper = document.getElementById('paper');
+const emptyState = document.getElementById('emptyState');
+const printBtn = document.getElementById('printBtn');
+const simplifyBtn = document.getElementById('simplifyBtn');
+const topicInput = document.getElementById('topicInput');
+const contentArea = document.getElementById('contentArea');
+const studyTabs = document.getElementById('studyTabs');
+const tabNotes = document.getElementById('tabNotes');
+const tabFlash = document.getElementById('tabFlash');
+const tabPractice = document.getElementById('tabPractice');
+
+let lastNotesText = '';
+let flashcardsData = null;
+let practiceData = null;
+let activeStudyTab = 'notes';
+let flashIndex = 0;
+
+tabPaste.addEventListener('click', () => switchMode('paste'));
+tabPdf.addEventListener('click', () => switchMode('pdf'));
+
+function switchMode(m){
+  mode = m;
+  tabPaste.classList.toggle('active', m === 'paste');
+  tabPdf.classList.toggle('active', m === 'pdf');
+  pasteMode.classList.toggle('hidden', m !== 'paste');
+  pdfMode.classList.toggle('hidden', m !== 'pdf');
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  uploadedFile = f;
+  fileName.textContent = f.name;
+  fileChip.classList.remove('hidden');
+  uploadZone.classList.add('hidden');
+});
+removeFile.addEventListener('click', () => {
+  uploadedFile = null;
+  fileInput.value = '';
+  fileChip.classList.add('hidden');
+  uploadZone.classList.remove('hidden');
+});
+
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    selectedLength = p.dataset.len;
+  });
+});
+
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return text.trim();
+}
+
+function showError(msg){
+  errorBox.textContent = msg;
+  errorBox.classList.remove('hidden');
+}
+function clearError(){
+  errorBox.classList.add('hidden');
+}
+
+function setLoading(loading){
+  generateBtn.disabled = loading;
+  generateBtn.innerHTML = loading
+    ? '<span class="spinner"></span> Writing your notes...'
+    : 'Generate notes';
+}
+
+function parseAndRender(text){
+  paper.innerHTML = '';
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  let delay = 0;
+  lines.forEach(line => {
+    let el;
+    let clean = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    if(/^#{1,3}\s+/.test(clean)){
+      el = document.createElement('div');
+      el.className = 'note-heading';
+      el.innerHTML = clean.replace(/^#{1,3}\s+/, '');
+    } else if(/^[-*]\s+/.test(clean)){
+      el = document.createElement('div');
+      el.className = 'note-bullet';
+      el.innerHTML = clean.replace(/^[-*]\s+/, '');
+    } else {
+      el = document.createElement('div');
+      el.className = 'note-text';
+      el.innerHTML = clean;
+    }
+    el.style.animationDelay = (delay * 0.05) + 's';
+    paper.appendChild(el);
+    delay++;
+  });
+  printBtn.disabled = false;
+}
+
+async function generateNotes(content, topic, wordTarget){
+  const systemPrompt = `You are a study-notes assistant for Indian college students preparing for exams. Turn the material the student gives you into clear, well-organised REVISION NOTES — not finished assignment answers or homework. Rules:
+- Use short topic headings, each on its own line starting with "## ".
+- Use concise bullet points starting with "- " for facts, definitions, and steps.
+- Add at most one short example per major point where it genuinely helps.
+- Plain, simple language a student can revise from quickly, in their own learning voice.
+- Do NOT write in essay/paragraph answer format and do NOT produce something that reads like a completed assignment submission.
+- Stay close to about ${wordTarget} words total.
+Return only the notes, with no preamble or sign-off.`;
+
+  const userContent = (topic ? `Topic: ${topic}\n\n` : '') + content;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }]
+    })
+  });
+
+  if(!response.ok){
+    throw new Error('API request failed: ' + response.status);
+  }
+  const data = await response.json();
+  const text = data.content.map(b => b.text || '').join('\n');
+  return text;
+}
+
+generateBtn.addEventListener('click', async () => {
+  clearError();
+  let rawContent = '';
+
+  try{
+    if(mode === 'paste'){
+      rawContent = contentArea.value.trim();
+      if(!rawContent){
+        showError('Paste some content first — a topic, paragraph, or chapter text.');
+        return;
+      }
+    } else {
+      if(!uploadedFile){
+        showError('Upload a PDF first.');
+        return;
+      }
+      setLoading(true);
+      rawContent = await extractPdfText(uploadedFile);
+      if(!rawContent){
+        setLoading(false);
+        showError("Couldn't read text from this PDF — it might be scanned/image-based. Try pasting the text instead.");
+        return;
+      }
+    }
+
+    setLoading(true);
+    emptyState.classList.add('hidden');
+    const wordTarget = LENGTH_CONFIG[selectedLength].words;
+    const topic = topicInput.value.trim();
+    const notesText = await generateNotes(rawContent, topic, wordTarget);
+    lastNotesText = notesText;
+    flashcardsData = null;
+    practiceData = null;
+    activeStudyTab = 'notes';
+    setActiveStudyTab('notes');
+    parseAndRender(notesText);
+    studyTabs.classList.remove('hidden');
+    simplifyBtn.disabled = false;
+
+  } catch(err){
+    console.error(err);
+    showError("Something went wrong generating your notes. Please try again.");
+    emptyState.classList.remove('hidden');
+  } finally {
+    setLoading(false);
+  }
+});
+
+function setActiveStudyTab(tab){
+  activeStudyTab = tab;
+  [tabNotes, tabFlash, tabPractice].forEach(t => t.classList.remove('active'));
+  document.getElementById(tab === 'notes' ? 'tabNotes' : tab === 'flashcards' ? 'tabFlash' : 'tabPractice').classList.add('active');
+}
+
+function showPaperLoading(msg){
+  paper.innerHTML = `<div class="loading-paper">${msg}</div>`;
+  printBtn.disabled = true;
+}
+
+function stripCodeFence(text){
+  return text.replace(/```json/g, '').replace(/```/g, '').trim();
+}
+
+async function callClaude(systemPrompt, userContent){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }]
+    })
+  });
+  if(!response.ok) throw new Error('API request failed: ' + response.status);
+  const data = await response.json();
+  return data.content.map(b => b.text || '').join('\n');
+}
+
+async function generateFlashcards(notesText){
+  const systemPrompt = `Based on the study notes given, create flashcards for active recall practice. Return ONLY a valid JSON array, no markdown code fences, no preamble, in this exact format: [{"q":"question text","a":"answer text"}]. Create 8 flashcards covering the key facts, definitions, and concepts. Keep questions short and answers under 18 words each.`;
+  const raw = await callClaude(systemPrompt, notesText);
+  return JSON.parse(stripCodeFence(raw));
+}
+
+async function generatePractice(notesText){
+  const systemPrompt = `Based on the study notes given, create practice questions a student can use to test themselves before an exam. Return ONLY a valid JSON array, no markdown code fences, no preamble, in this exact format: [{"question":"...","answer":"..."}]. Create 6 questions of mixed difficulty (recall, understanding, application), each with a concise model answer (1-2 short sentences).`;
+  const raw = await callClaude(systemPrompt, notesText);
+  return JSON.parse(stripCodeFence(raw));
+}
+
+async function generateSimplified(notesText){
+  const systemPrompt = `Rewrite the following study notes in much simpler language, as if explaining to a first-year student with no background in the topic. Use short sentences and a friendly everyday analogy where it genuinely helps. Keep the same structure: headings starting with "## " and bullet points starting with "- ". Don't add new topics, just simplify what's already there. Return only the rewritten notes, no preamble.`;
+  return await callClaude(systemPrompt, notesText);
+}
+
+function renderFlashcards(cards){
+  flashIndex = 0;
+  paper.innerHTML = `
+    <div class="flash-wrap">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-inner">
+          <div class="flashcard-face front" id="flashFront"></div>
+          <div class="flashcard-face back" id="flashBack"></div>
+        </div>
+      </div>
+      <div class="flash-hint">Tap the card to flip</div>
+      <div class="flash-nav">
+        <button id="flashPrev">← Prev</button>
+        <span class="flash-counter" id="flashCounter"></span>
+        <button id="flashNext">Next →</button>
+      </div>
+    </div>`;
+  const flashcard = document.getElementById('flashcard');
+  flashcard.addEventListener('click', () => flashcard.classList.toggle('flipped'));
+  document.getElementById('flashPrev').addEventListener('click', (e) => { e.stopPropagation(); moveFlash(-1, cards); });
+  document.getElementById('flashNext').addEventListener('click', (e) => { e.stopPropagation(); moveFlash(1, cards); });
+  showFlashCard(cards);
+  printBtn.disabled = false;
+}
+
+function showFlashCard(cards){
+  const card = cards[flashIndex];
+  document.getElementById('flashFront').textContent = card.q;
+  document.getElementById('flashBack').textContent = card.a;
+  document.getElementById('flashCounter').textContent = (flashIndex + 1) + ' / ' + cards.length;
+  document.getElementById('flashPrev').disabled = flashIndex === 0;
+  document.getElementById('flashNext').disabled = flashIndex === cards.length - 1;
+  document.getElementById('flashcard').classList.remove('flipped');
+}
+
+function moveFlash(dir, cards){
+  flashIndex = Math.max(0, Math.min(cards.length - 1, flashIndex + dir));
+  showFlashCard(cards);
+}
+
+function renderPractice(qs){
+  paper.innerHTML = '';
+  qs.forEach((item, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'practice-item';
+    wrap.innerHTML = `
+      <div class="practice-q">${i + 1}. ${item.question}</div>
+      <button class="practice-toggle">Show answer</button>
+      <div class="practice-a">${item.answer}</div>`;
+    const btn = wrap.querySelector('.practice-toggle');
+    const ans = wrap.querySelector('.practice-a');
+    btn.addEventListener('click', () => {
+      ans.classList.toggle('show');
+      btn.textContent = ans.classList.contains('show') ? 'Hide answer' : 'Show answer';
+    });
+    paper.appendChild(wrap);
+  });
+  printBtn.disabled = false;
+}
+
+async function handleStudyTabClick(tab){
+  if(!lastNotesText) return;
+  setActiveStudyTab(tab);
+  clearError();
+  try{
+    if(tab === 'notes'){
+      parseAndRender(lastNotesText);
+    } else if(tab === 'flashcards'){
+      if(!flashcardsData){
+        showPaperLoading('Making flashcards...');
+        flashcardsData = await generateFlashcards(lastNotesText);
+      }
+      renderFlashcards(flashcardsData);
+    } else if(tab === 'practice'){
+      if(!practiceData){
+        showPaperLoading('Writing practice questions...');
+        practiceData = await generatePractice(lastNotesText);
+      }
+      renderPractice(practiceData);
+    }
+  } catch(err){
+    console.error(err);
+    showError('Could not generate that — please try again.');
+    paper.innerHTML = '<div class="loading-paper">Something went wrong. Try this tab again.</div>';
+  }
+}
+
+tabNotes.addEventListener('click', () => handleStudyTabClick('notes'));
+tabFlash.addEventListener('click', () => handleStudyTabClick('flashcards'));
+tabPractice.addEventListener('click', () => handleStudyTabClick('practice'));
+
+simplifyBtn.addEventListener('click', async () => {
+  if(!lastNotesText) return;
+  clearError();
+  simplifyBtn.disabled = true;
+  showPaperLoading('Simplifying...');
+  try{
+    const simpler = await generateSimplified(lastNotesText);
+    lastNotesText = simpler;
+    flashcardsData = null;
+    practiceData = null;
+    setActiveStudyTab('notes');
+    parseAndRender(simpler);
+  } catch(err){
+    console.error(err);
+    showError('Could not simplify right now — please try again.');
+    parseAndRender(lastNotesText);
+  } finally {
+    simplifyBtn.disabled = false;
+  }
+});
+
+printBtn.addEventListener('click', () => window.print());
+
+</script>
+</body>
+</html>
