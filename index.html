@@ -453,24 +453,7 @@ async function generateNotes(content, topic, wordTarget){
 Return only the notes, with no preamble or sign-off.`;
 
   const userContent = (topic ? `Topic: ${topic}\n\n` : '') + content;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }]
-    })
-  });
-
-  if(!response.ok){
-    throw new Error('API request failed: ' + response.status);
-  }
-  const data = await response.json();
-  const text = data.content.map(b => b.text || '').join('\n');
-  return text;
+  return await callClaude(systemPrompt, userContent);
 }
 
 generateBtn.addEventListener('click', async () => {
@@ -537,11 +520,10 @@ function stripCodeFence(text){
 }
 
 async function callClaude(systemPrompt, userContent){
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }]
